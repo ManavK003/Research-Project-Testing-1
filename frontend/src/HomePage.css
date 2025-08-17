@@ -48,11 +48,12 @@
 .hero-prompt {
     position: absolute;
     bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+    width: 100%; /* Make it span the full width */
+    text-align: center; /* Center the text inside */
     z-index: 2;
     color: rgba(255, 255, 255, 0.8);
     font-size: 1rem;
+    
 }
 
 .get-started-btn {
@@ -73,4 +74,56 @@
 
 .get-started-btn:hover {
     background-color: #0056b3;
+}
+
+/* --- NEW: Styles for The Modal --- */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Dark, semi-transparent backdrop */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100; 
+}
+
+.form-container {
+    padding: 40px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    color: #333;
+}
+
+.form-container .logo { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+.form-container .title { margin-bottom: 25px; color: #1c1c1e; font-weight: 600; }
+.form-container form input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; }
+.form-container form input:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2); }
+.form-container .submit-btn { width: 100%; padding: 12px; border: none; border-radius: 6px; background-color: #007aff; color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.2s ease-in-out; }
+.form-container .submit-btn:hover { background-color: #0056b3; }
+.form-container .toggle-view { margin-top: 20px; font-size: 14px; }
+.form-container .toggle-view span { color: #007aff; font-weight: bold; cursor: pointer; }
+.form-container .toggle-view span:hover { text-decoration: underline; }
+
+/* --- NEW: Section for Responsiveness --- */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem; /* Smaller title on mobile */
+    }
+    .hero-subtitle {
+        font-size: 1.2rem; /* Smaller subtitle on mobile */
+    }
+    .get-started-btn {
+        top: 15px;
+        right: 15px;
+    }
+    .form-container {
+        max-width: 90%; /* Allow form to be wider on mobile */
+    }
 }

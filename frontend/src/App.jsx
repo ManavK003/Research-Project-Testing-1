@@ -117,84 +117,68 @@ function HomePage({ onLoginSuccess }) {
 
 
 function AuthModal({ onLoginSuccess, closeModal }) {
-    const [isLoginView, setIsLoginView] = useState(true);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [username, setUsername] = useState('');
-    const [error, setError] = useState('');
-    
-    
-    const handleModalContentClick = (e) => e.stopPropagation();
+  const [isLoginView, setIsLoginView] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+  
+  // This function stops the modal from closing when its content is clicked.
+  const handleModalContentClick = (e) => e.stopPropagation();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        const endpoint = isLoginView ? '/api/login' : '/api/signup';
-        const payload = isLoginView ? { email, password } : { username, email, password };
-        
-        try {
-            
-            console.log(`Calling backend at ${endpoint} with`, payload);
-            
-          
+  const handleSubmit = async (e) => {
+      e.preventDefault();
+      setError('');
+      const endpoint = isLoginView ? '/api/login' : '/api/signup';
+      const payload = isLoginView ? { email, password } : { username, email, password };
+      
+      try {
+          // This is where the call to your real backend will go.
+          console.log(`Calling backend at ${endpoint} with`, payload);
 
-            if (isLoginView) {
-                // onLoginSuccess(data.token);
-                // --- SIMULATION ---
-                onLoginSuccess("fake_jwt_token_for_testing");
-            } else {
-                alert("Sign up successful! Please log in.");
-                setIsLoginView(true);
-            }
+          // For now, we simulate a successful login.
+          if (isLoginView) {
+              onLoginSuccess("fake_jwt_token_for_testing");
+          } else {
+              // For sign up, we just show a message.
+              alert("Sign up successful! Please log in.");
+              setIsLoginView(true);
+          }
+      } catch (err) {
+          setError(err.message);
+      }
+  };
 
-        } catch (err) {
-            setError(err.message);
-        }
-    };
+  return (
+      // This now uses the custom CSS classes from HomePage.css
+      <div className="modal-backdrop" onClick={closeModal}>
+          <div className="form-container" onClick={handleModalContentClick}>
+              <div className="logo">Transcribed AI</div>
+              <h2 className="title">{isLoginView ? 'Welcome Back' : 'Create an Account'}</h2>
+              
+              <form onSubmit={handleSubmit}>
+                  {!isLoginView && (
+                      <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                  )}
+                  <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  
+                  {error && <p style={{color: 'red', fontSize: '14px', marginBottom: '15px'}}>{error}</p>}
+                  
+                  <button type="submit" className="submit-btn">
+                      {isLoginView ? 'Log In' : 'Sign Up'}
+                  </button>
+              </form>
 
-    return (
-        <div 
-            className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center"
-            onClick={closeModal} // Close modal on backdrop click
-        >
-            <div 
-                className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-gray-800"
-                onClick={handleModalContentClick}
-            >
-                <h2 className="text-2xl font-bold text-center mb-1">Transcribed</h2>
-                <p className="text-center text-gray-500 mb-6">
-                    {isLoginView ? 'Welcome Back' : 'Create an Account'}
-                </p>
-                
-                <form onSubmit={handleSubmit}>
-                    {!isLoginView && (
-                        <div className="mb-4">
-                            <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                        </div>
-                    )}
-                    <div className="mb-4">
-                        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                    </div>
-                    <div className="mb-6">
-                        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                    </div>
-                    
-                    {error && <p className="text-red-500 text-sm mb-4 text-center">{error}</p>}
-                    
-                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300">
-                        {isLoginView ? 'Log In' : 'Sign Up'}
-                    </button>
-                </form>
-
-                <p className="text-center text-gray-500 mt-6">
-                    {isLoginView ? "Don't have an account? " : "Already have an account? "}
-                    <button onClick={() => setIsLoginView(!isLoginView)} className="text-blue-600 hover:underline font-semibold">
-                        {isLoginView ? 'Sign Up' : 'Log In'}
-                    </button>
-                </p>
-            </div>
-        </div>
-    );
+              <div className="toggle-view">
+                  {isLoginView ? "Don't have an account? " : "Already have an account? "}
+                  <span onClick={() => setIsLoginView(!isLoginView)}>
+                      {isLoginView ? 'Sign Up' : 'Log In'}
+                  </span>
+              </div>
+          </div>
+      </div>
+  );
 }
 
 
