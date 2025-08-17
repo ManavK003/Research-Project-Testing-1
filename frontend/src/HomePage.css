@@ -111,19 +111,19 @@
 .form-container .toggle-view span { color: #007aff; font-weight: bold; cursor: pointer; }
 .form-container .toggle-view span:hover { text-decoration: underline; }
 
-/* --- NEW: Section for Responsiveness --- */
+
 @media (max-width: 768px) {
     .hero-title {
-        font-size: 2.5rem; /* Smaller title on mobile */
+        font-size: 2.5rem; 
     }
     .hero-subtitle {
-        font-size: 1.2rem; /* Smaller subtitle on mobile */
+        font-size: 1.2rem; 
     }
     .get-started-btn {
         top: 15px;
         right: 15px;
     }
     .form-container {
-        max-width: 90%; /* Allow form to be wider on mobile */
+        max-width: 90%; 
     }
 }
