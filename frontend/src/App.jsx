@@ -91,39 +91,27 @@ function HomePage({ onLoginSuccess }) {
   }, [backgroundImages.length]);
 
   return (
-      <div 
-          className="home-container" 
-          style={{ backgroundImage: `url(${backgroundImages[bgIndex]})` }}
-      >
-          <div className="home-overlay"></div>
+    <div 
+        className="home-container" 
+        style={{ backgroundImage: `url(${backgroundImages[bgIndex]})` }}
+    >
+        <div className="home-overlay"></div>
 
-          <div className="relative z-10 flex flex-col h-full p-4 sm:p-6 w-full">
-              <header className="flex justify-end items-center">
-                  <button 
-                      onClick={() => setIsFormVisible(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300"
-                  >
-                      Get Started
-                  </button>
-              </header>
+        {/* This is the new, simpler structure */}
+        <div className="hero-text-container">
+            <h1 className="hero-title">Transcribed AI</h1>
+            <p className="hero-subtitle">Analyze Your Voice With Real Feedback</p>
+        </div>
 
-              <main className="flex-grow flex flex-col items-center justify-center text-center">
-                  {/* This is your desired structure */}
-                  <div className="hero-text-container">
-                      <h1 className="hero-title">Transcribed AI</h1>
-                      <p className="hero-subtitle">Analyze Your Voice With Real Feedback</p>
-                  </div>
-              </main>
+        <p className="hero-prompt">Log in or sign up to get started</p>
 
-              <footer>
-                  {/* This is your desired structure */}
-                  <p className="hero-prompt">Log in or sign up to get started</p>
-              </footer>
-          </div>
+        <button className="get-started-btn" onClick={() => setIsFormVisible(true)}>
+            Get Started
+        </button>
 
-          {isFormVisible && <AuthModal onLoginSuccess={onLoginSuccess} closeModal={() => setIsFormVisible(false)} />}
-      </div>
-  );
+        {isFormVisible && <AuthModal onLoginSuccess={onLoginSuccess} closeModal={() => setIsFormVisible(false)} />}
+    </div>
+);
 }
 
 

@@ -54,3 +54,23 @@
     color: rgba(255, 255, 255, 0.8);
     font-size: 1rem;
 }
+
+.get-started-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    background-color: #007aff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.get-started-btn:hover {
+    background-color: #0056b3;
+}
