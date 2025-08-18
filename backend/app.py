@@ -30,8 +30,9 @@ CORS(app,
      origins=[
          "http://localhost:5173", 
          "http://127.0.0.1:5173",
-         "https://*.vercel.app", 
-         "https://*.netlify.app" 
+         "https://research-project-testing-1.vercel.app/",
+         "https://*.netlify.app"
+         
      ],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"],
