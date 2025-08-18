@@ -27,13 +27,23 @@ load_dotenv()
 app = Flask(__name__)
 
 CORS(app, 
-     origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+     origins=[
+         "http://localhost:5173", 
+         "http://127.0.0.1:5173",
+         "https://*.vercel.app", 
+         "https://*.netlify.app" 
+     ],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"])
+     allow_headers=["Content-Type", "Authorization"],
+     supports_credentials=True)
 
 app.config["JWT_TOKEN_LOCATION"] = ["headers"]
 app.config["JWT_CSRF_IN_COOKIES"] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+if os.environ.get('DATABASE_URL'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'a-very-strong-default-secret-key')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
@@ -370,6 +380,5 @@ def delete_transcript(id):
     return jsonify({"message": "Transcript deleted"}), 200
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)
