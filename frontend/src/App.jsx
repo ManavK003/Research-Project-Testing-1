@@ -99,6 +99,19 @@ function AuthModal({ onLoginSuccess, closeModal }) {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
+
+
+
+    const handleViewToggle = () => {
+        if (isSubmitting) return; 
+        setEmail('');
+        setPassword('');
+        setUsername('');
+        setError('');
+        setIsLoginView(!isLoginView);
+    };
+
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -158,7 +171,7 @@ function AuthModal({ onLoginSuccess, closeModal }) {
                 </form>
                 <div className="toggle-view">
                     {isLoginView ? "Don't have an account? " : "Already have an account? "}
-                    <span onClick={() => { if (!isSubmitting) setIsLoginView(!isLoginView); }}>
+                    <span onClick={handleViewToggle}>
                         {isLoginView ? 'Sign Up' : 'Log In'}
                     </span>
                 </div>
