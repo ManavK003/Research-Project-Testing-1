@@ -65,7 +65,7 @@ def invalid_token_callback(error):
 def missing_token_callback(error):
     return jsonify({"error": "Authorization token is required"}), 401
 
-# --- SIMPLE AI MODEL LOADING ---
+
 try:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -80,14 +80,14 @@ except Exception as e:
     processor = None
     model = None
 
-# --- ZERO PROCESSING - DIRECT AUDIO LOAD ---
+
 def raw_audio_load(audio_path):
     """
     Load audio with ZERO preprocessing - just get it to Whisper
     """
     try:
         
-        # Just load with librosa - no filtering, no normalization, NOTHING
+        # Just load with librosa
         audio_data, sample_rate = librosa.load(audio_path, sr=16000, mono=True)
         
         duration = len(audio_data) / sample_rate
@@ -105,18 +105,18 @@ def direct_whisper_transcribe(audio_data, sample_rate=16000):
         if audio_data is None:
             return "[No audio data]"
         
-        # Just send it directly to Whisper
+        # sent directly to Whisper
         input_features = processor(
             audio_data, 
             sampling_rate=sample_rate, 
             return_tensors="pt"
         ).input_features.to(device)
         
-        # Simple generation
+        
         with torch.no_grad():
             generated_ids = model.generate(input_features)
         
-        # Get result
+     
         transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
         
         return transcription if transcription else "[No speech detected]"
@@ -144,7 +144,7 @@ class Transcript(db.Model):
     speech_rate = db.Column(db.Float) 
     avg_words_per_sentence = db.Column(db.Float)
 
-# --- Helper Functions ---
+
 def analyze_transcript(text, audio_duration_seconds):
     words = text.split()
     word_count = len(words)
@@ -272,31 +272,31 @@ def transcribe_audio():
     final_path = os.path.join(user_audio_dir, filename)
     
     try:
-        # Save uploaded file
+       
         audio_file.save(original_path)
         
-        # Load and process audio (ZERO processing)
+    
         audio_data, sample_rate = raw_audio_load(original_path)
         
         if audio_data is None:
             return jsonify({"error": "Could not load audio file. Please try recording again."}), 400
         
-        # NO VALIDATION - just transcribe whatever we got
+       
         duration_seconds = len(audio_data) / sample_rate
         
         # Save as WAV for storage
         sf.write(final_path, audio_data, sample_rate)
         
-        # Clean up temp file
+     
         os.remove(original_path)
         
-        # Transcribe with Whisper (no validation)
+       
         transcription = direct_whisper_transcribe(audio_data, sample_rate)
         
-        # Analyze transcript
+       
         analysis = analyze_transcript(transcription, duration_seconds)
         
-        # Save to database
+   
         new_transcript = Transcript(
             user_id=current_user_id, 
             name=f"Recording {timestamp}", 
@@ -308,7 +308,7 @@ def transcribe_audio():
         db.session.add(new_transcript)
         db.session.commit()
         
-        # Return response
+    
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
         
         return jsonify({
@@ -323,7 +323,7 @@ def transcribe_audio():
     except Exception as e:
         traceback.print_exc()
         
-        # Clean up files
+    
         for temp_file in [original_path, final_path]:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
