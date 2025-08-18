@@ -1,14 +1,14 @@
 import os
 import re
-import torch
-import torchaudio
-import soundfile as sf
-import numpy as np
-from scipy import signal
-from scipy.signal import butter, filtfilt
-import librosa
-from pydub import AudioSegment
-from pydub.effects import normalize
+#import torch
+#import torchaudio
+#import soundfile as sf
+#import numpy as np
+#from scipy import signal
+#from scipy.signal import butter, filtfilt
+#import librosa
+#from pydub import AudioSegment
+#from pydub.effects import normalize
 import io
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -16,7 +16,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager
 from flask_cors import CORS
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
+#from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from datetime import datetime, timedelta
 import traceback
 from dotenv import load_dotenv 
