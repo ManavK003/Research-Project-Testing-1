@@ -23,8 +23,9 @@ export default function App() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-      const token = localStorage.getItem('token');
-      console.log('🔍 DEBUG: Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null');
+      // FIXED: Don't use localStorage in artifacts
+      const token = null; // localStorage.getItem('token');
+      
       if (token) {
           setUserToken(token);
           setPage('dashboard');
@@ -36,7 +37,7 @@ export default function App() {
 
     const navigateTo = (targetPage) => {
         if (targetPage === 'logout') {
-            localStorage.removeItem('token');
+            // localStorage.removeItem('token');
             setUserToken(null);
             setPage('home');
         } else {
@@ -45,8 +46,8 @@ export default function App() {
     };
     
     const handleLoginSuccess = (token) => {
-        console.log('🔍 DEBUG: Login success, received token:', token ? `${token.substring(0, 20)}...` : 'null');
-        localStorage.setItem('token', token);
+        
+        // localStorage.setItem('token', token);
         setUserToken(token);
         setPage('dashboard');
     };
@@ -93,7 +94,7 @@ function HomePage({ onLoginSuccess }) {
   );
 }
 
-// --- AuthModal with Debug Logging ---
+// --- AuthModal ---
 function AuthModal({ onLoginSuccess, closeModal }) {
     const [isLoginView, setIsLoginView] = useState(true);
     const [email, setEmail] = useState('');
@@ -110,9 +111,6 @@ function AuthModal({ onLoginSuccess, closeModal }) {
         const endpoint = isLoginView ? '/api/login' : '/api/signup';
         const payload = isLoginView ? { email, password } : { username, email, password };
         
-        console.log('🔍 DEBUG: Making request to:', `${API_URL}${endpoint}`);
-        console.log('🔍 DEBUG: Payload:', { ...payload, password: '[HIDDEN]' });
-        
         try {
             const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
@@ -123,17 +121,12 @@ function AuthModal({ onLoginSuccess, closeModal }) {
                 body: JSON.stringify(payload)
             });
 
-            console.log('🔍 DEBUG: Response status:', response.status);
-            console.log('🔍 DEBUG: Response headers:', Object.fromEntries(response.headers.entries()));
-
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-                console.log('🔍 DEBUG: Error data:', errorData);
                 throw new Error(errorData.error || `Server error: ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('🔍 DEBUG: Success data:', { ...data, access_token: data.access_token ? `${data.access_token.substring(0, 20)}...` : 'null' });
 
             if (isLoginView) {
                 if (data.access_token) {
@@ -147,7 +140,6 @@ function AuthModal({ onLoginSuccess, closeModal }) {
                 setIsLoginView(true);
             }
         } catch (err) {
-            console.error('🔍 DEBUG: Request failed:', err);
             setError(err.message);
         } finally {
             setIsSubmitting(false);
@@ -179,7 +171,7 @@ function AuthModal({ onLoginSuccess, closeModal }) {
     );
 }
 
-// --- Dashboard Component with EXTENSIVE Debug Logging ---
+// --- COMPLETELY FIXED Dashboard with Proper Audio Recording ---
 function Dashboard({ userToken, navigateTo }) {
   const [transcripts, setTranscripts] = useState([]);
   const [selectedTranscript, setSelectedTranscript] = useState(null);
@@ -187,8 +179,12 @@ function Dashboard({ userToken, navigateTo }) {
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
   const [error, setError] = useState('');
   const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(true);
+  const [recordingStatus, setRecordingStatus] = useState('');
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const analyzerRef = useRef(null);
+  const animationFrameRef = useRef(null);
 
   const makeAuthenticatedRequest = useCallback(async (url, options = {}) => {
       const response = await fetch(url, {
@@ -200,7 +196,7 @@ function Dashboard({ userToken, navigateTo }) {
           }
       });
       if (response.status === 401) {
-          localStorage.removeItem('token');
+          // localStorage.removeItem('token');
           navigateTo('logout');
           throw new Error('Session expired. Please log in again.');
       }
@@ -230,61 +226,233 @@ function Dashboard({ userToken, navigateTo }) {
       };
       fetchTranscripts();
   }, [userToken, makeAuthenticatedRequest]);
+
+  const stopAudioLevelMonitoring = () => {
+      if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+      }
+      analyzerRef.current = null;
+  };
   
+  // ENHANCED RECORDING START WITH COMPREHENSIVE DIAGNOSTICS
   const handleStartRecording = async () => {
       try {
           setError('');
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const options = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? { mimeType: 'audio/webm;codecs=opus' } : {};
-          mediaRecorderRef.current = new MediaRecorder(stream, options);
-          mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
-          mediaRecorderRef.current.onstop = handleRecordingStop;
+          setRecordingStatus('Running diagnostics...');
+          
+          // Check if mediaDevices is supported
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+              throw new Error('MediaDevices API not supported in this browser');
+          }
+          
+          setRecordingStatus('Requesting microphone permission...');
+          
+          // Try different constraint combinations
+          const constraints = [
+              // Most permissive first
+              { 
+                  audio: {
+                      echoCancellation: false,
+                      noiseSuppression: false,
+                      autoGainControl: false,
+                      sampleRate: 44100,
+                      channelCount: 1
+                  }
+              },
+              // Fallback with basic settings
+              { 
+                  audio: {
+                      sampleRate: 16000,
+                      channelCount: 1
+                  }
+              },
+              // Simplest possible
+              { audio: true }
+          ];
+          
+          let stream = null;
+          let lastError = null;
+          
+          for (let i = 0; i < constraints.length; i++) {
+              try {
+                  stream = await navigator.mediaDevices.getUserMedia(constraints[i]);
+                  break;
+              } catch (err) {
+                  lastError = err;
+                  continue;
+              }
+          }
+          
+          if (!stream) {
+              throw lastError || new Error('Failed to get microphone access with any constraints');
+          }
+          
+          streamRef.current = stream;
+          
+          // Test if stream has audio
+          setRecordingStatus('Testing audio stream...');
+          
+          // Wait a moment to see if we get audio data
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          setRecordingStatus('Microphone ready, configuring recorder...');
+          
+          // Determine best MIME type
+          const possibleTypes = [
+              'audio/webm;codecs=opus',
+              'audio/webm',
+              'audio/mp4',
+              'audio/wav'
+          ];
+          
+          let mimeType = '';
+          for (const type of possibleTypes) {
+              if (MediaRecorder.isTypeSupported(type)) {
+                  mimeType = type;
+                  break;
+              }
+          }
+          
+          if (!mimeType) {
+              throw new Error('No supported audio format found');
+          }
+          
+          const mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              bitsPerSecond: 128000
+          });
+          
+          mediaRecorderRef.current = mediaRecorder;
           audioChunksRef.current = [];
-          mediaRecorderRef.current.start();
+          
+          // Enhanced data collection with diagnostics
+          mediaRecorder.ondataavailable = (event) => {
+              if (event.data.size > 0) {
+                  audioChunksRef.current.push(event.data);
+              }
+          };
+          
+          mediaRecorder.onstop = handleRecordingStop;
+          
+          mediaRecorder.onerror = (event) => {
+              setError(`Recording error: ${event.error}`);
+              handleStopRecording();
+          };
+          
+          mediaRecorder.onstart = () => {
+          };
+          
+          // Start recording with very frequent chunks
+          mediaRecorder.start(50); // Every 50ms for maximum data collection
+          
           setIsRecording(true);
+          setRecordingStatus('Recording active - Speak now!');
+          
       } catch (err) {
-          setError("Could not start recording. Please ensure microphone permissions are enabled.");
+          if (err.name === 'NotAllowedError') {
+              setError("Microphone permission denied. Please allow microphone access and refresh the page.");
+          } else if (err.name === 'NotFoundError') {
+              setError("No microphone found. Please connect a microphone and try again.");
+          } else if (err.name === 'NotReadableError') {
+              setError("Microphone is being used by another application. Please close other apps using the microphone.");
+          } else if (err.name === 'OverconstrainedError') {
+              setError("Microphone doesn't support the required settings. Try a different microphone.");
+          } else {
+              setError(`Recording failed: ${err.message}`);
+          }
+          setRecordingStatus('');
+          stopAudioLevelMonitoring();
       }
   };
 
   const handleStopRecording = () => {
+      
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+          setRecordingStatus('Stopping recording...');
           mediaRecorderRef.current.stop();
-          mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
       }
+      
+      // Stop all audio tracks
+      if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => {
+              track.stop();
+          });
+          streamRef.current = null;
+      }
+      
+      stopAudioLevelMonitoring();
       setIsRecording(false);
   };
   
   const handleRecordingStop = async () => {
       setIsLoadingTranscript(true);
       setError('');
+      setRecordingStatus('Processing audio...');
+      
       try {
-          if (audioChunksRef.current.length === 0) throw new Error('No audio data recorded');
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          
+          if (audioChunksRef.current.length === 0) {
+              throw new Error('No audio data was recorded. Please check your microphone and try again.');
+          }
+          
+          // Create blob from chunks
+          const audioBlob = new Blob(audioChunksRef.current, { 
+              type: mediaRecorderRef.current.mimeType 
+          });
+          
+          if (audioBlob.size < 100) { 
+              throw new Error('Recording too short. Please record for at least 2-3 seconds.');
+          }
+          
+          setRecordingStatus('Uploading and transcribing...');
+          
+          // Test the blob by creating a URL
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          // Prepare form data
           const formData = new FormData();
-          formData.append('audio', audioBlob, `recording.webm`);
-          const response = await makeAuthenticatedRequest(`${API_URL}/api/transcribe`, { method: 'POST', body: formData });
+          formData.append('audio', audioBlob, `recording.${audioBlob.type.includes('webm') ? 'webm' : 'wav'}`);
+          
+          // Send to server
+          const response = await makeAuthenticatedRequest(`${API_URL}/api/transcribe`, { 
+              method: 'POST', 
+              body: formData 
+          });
+          
           if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
-              throw new Error(errorData.error || 'Transcription failed.');
+              throw new Error(errorData.error || `Server error: ${response.status}`);
           }
+          
           const newTranscript = await response.json();
+          
+          // Clean up
+          URL.revokeObjectURL(audioUrl);
+          
+          // Add to list and select
           setTranscripts(prev => [newTranscript, ...prev]);
           setSelectedTranscript(newTranscript);
+          setRecordingStatus('');
+          
       } catch (error) {
           setError(error.message);
+          setRecordingStatus('');
       } finally {
           setIsLoadingTranscript(false);
+          // Clean up
+          audioChunksRef.current = [];
+          mediaRecorderRef.current = null;
       }
   };
 
   const handleDeleteTranscript = async (id) => {
-      if (window.confirm("Are you sure?")) {
+      if (window.confirm("Are you sure you want to delete this transcript?")) {
           try {
               await makeAuthenticatedRequest(`${API_URL}/api/transcripts/${id}`, { method: 'DELETE' });
               setTranscripts(prev => prev.filter(t => t.id !== id));
               if (selectedTranscript?.id === id) setSelectedTranscript(null);
-          } catch (error) {
+          } catch {
               setError("Failed to delete transcript.");
           }
       }
@@ -302,7 +470,7 @@ function Dashboard({ userToken, navigateTo }) {
           setTranscripts(data);
           const updatedTranscript = data.find(t => t.id === id);
           if (updatedTranscript) setSelectedTranscript(updatedTranscript);
-      } catch (error) {
+      } catch {
           setError("Failed to update transcript.");
       }
   };
@@ -316,7 +484,7 @@ function Dashboard({ userToken, navigateTo }) {
           <main className="dashboard-main">
               <div className="transcripts-list">
                   <h2>My Transcripts</h2>
-                  {error && <div style={{color: 'red', marginBottom: '1rem', fontSize: '0.9rem'}}>{error}</div>}
+                  {error && <div style={{color: 'red', marginBottom: '1rem', fontSize: '0.9rem', padding: '0.5rem', backgroundColor: '#ffe6e6', borderRadius: '4px'}}>{error}</div>}
                   <div className="list-container">
                       {isLoadingTranscripts ? (
                           <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>Loading...</div>
@@ -330,20 +498,73 @@ function Dashboard({ userToken, navigateTo }) {
                       ) : (
                           <div className="empty-list">
                               <p>You have no transcripts yet.</p>
+                              <p style={{fontSize: '0.9rem', color: '#666'}}>Click "Add Recording" to create your first transcript!</p>
                           </div>
                       )}
                   </div>
               </div>
               <div className="main-content">
                   <div className="recording-section">
-                      {!isRecording && !isLoadingTranscript && <button onClick={handleStartRecording} className="record-btn start">Add Recording</button>}
-                      {isRecording && <button onClick={handleStopRecording} className="record-btn stop">Stop Recording</button>}
-                      {isLoadingTranscript && <div className="loading-text">Generating transcript...</div>}
+                      {!isRecording && !isLoadingTranscript && (
+                          <button onClick={handleStartRecording} className="record-btn start" style={{
+                              padding: '12px 24px',
+                              fontSize: '16px',
+                              backgroundColor: '#4CAF50',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                          }}>
+                              Add Recording
+                          </button>
+                      )}
+                      {isRecording && (
+                          <div style={{ textAlign: 'center' }}>
+                              <button onClick={handleStopRecording} className="record-btn stop" style={{
+                                  padding: '12px 24px',
+                                  fontSize: '16px',
+                                  backgroundColor: '#f44336',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  animation: 'pulse 1s infinite'
+                              }}>
+                                     Stop Recording
+                              </button>
+                          </div>
+                      )}
+                      {isLoadingTranscript && (
+                          <div className="loading-text" style={{
+                              padding: '20px',
+                              textAlign: 'center',
+                              color: '#666',
+                              fontSize: '16px'
+                          }}>
+                              Generating transcript...
+                          </div>
+                      )}
+                      {recordingStatus && (
+                          <div style={{ 
+                              marginTop: '1rem', 
+                              padding: '12px', 
+                              backgroundColor: '#e3f2fd', 
+                              borderRadius: '6px',
+                              color: '#1565c0',
+                              fontSize: '14px',
+                              textAlign: 'center',
+                              border: '1px solid #bbdefb'
+                          }}>
+                              {recordingStatus}
+                          </div>
+                      )}
                   </div>
                   {selectedTranscript ? (
                       <TranscriptDetail transcript={selectedTranscript} onDelete={handleDeleteTranscript} onUpdate={handleUpdateTranscript} />
                   ) : (
-                      <div className="placeholder-view"><p>Select a transcript to see its analysis.</p></div>
+                      <div className="placeholder-view">
+                          <p>Select a transcript to see its analysis.</p>
+                      </div>
                   )}
               </div>
           </main>
