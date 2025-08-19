@@ -238,7 +238,7 @@ def transcribe_with_whisper_large_v3(audio_file_path):
     
     try:
         # Hugging Face Whisper Large V3 API
-        API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
+        API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3" 
         
         audio_format = audio_file_path.split('.')[-1]
         headers = {
