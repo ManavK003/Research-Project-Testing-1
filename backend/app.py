@@ -110,13 +110,13 @@ class UserDocument:
     
     @staticmethod
     def find_by_email(email):
-        if not db:
+        if db is None:
             return None
         return db.users.find_one({"email": email.lower().strip()})
     
     @staticmethod
     def find_by_id(user_id):
-        if not db:
+        if db is None:
             return None
         try:
             return db.users.find_one({"_id": ObjectId(user_id)})
@@ -125,7 +125,7 @@ class UserDocument:
     
     @staticmethod
     def insert(user_doc):
-        if not db:
+        if db is None:
             return None
         try:
             result = db.users.insert_one(user_doc)
@@ -152,7 +152,7 @@ class TranscriptDocument:
     
     @staticmethod
     def find_by_user(user_id):
-        if not db:
+        if db is None:
             return []
         try:
             return list(db.transcripts.find(
@@ -163,7 +163,7 @@ class TranscriptDocument:
     
     @staticmethod
     def find_by_id(transcript_id):
-        if not db:
+        if db is None:
             return None
         try:
             return db.transcripts.find_one({"_id": ObjectId(transcript_id)})
@@ -172,7 +172,7 @@ class TranscriptDocument:
     
     @staticmethod
     def insert(transcript_doc):
-        if not db:
+        if db is None:
             return None
         try:
             result = db.transcripts.insert_one(transcript_doc)
@@ -183,7 +183,7 @@ class TranscriptDocument:
     
     @staticmethod
     def update(transcript_id, updates):
-        if not db:
+        if db is None:
             return False
         try:
             updates["updated_at"] = datetime.utcnow()
@@ -197,7 +197,7 @@ class TranscriptDocument:
     
     @staticmethod
     def delete(transcript_id):
-        if not db:
+        if db is None:
             return False
         try:
             result = db.transcripts.delete_one({"_id": ObjectId(transcript_id)})
@@ -738,7 +738,7 @@ if __name__ == '__main__':
     print("Starting Transcribed AI with Whisper Large V3 API...")
     
     # Validate configuration
-    if not db:
+    if db is None:
         print("⚠️  WARNING: Database connection failed!")
     
     if HUGGINGFACE_API_KEY:
