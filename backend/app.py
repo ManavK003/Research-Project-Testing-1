@@ -239,7 +239,12 @@ def transcribe_with_whisper_large_v3(audio_file_path):
     try:
         # Hugging Face Whisper Large V3 API
         API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
-        headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
+        
+        audio_format = audio_file_path.split('.')[-1]
+        headers = {
+            "Authorization": f"Bearer {HUGGINGFACE_API_KEY}",
+            "Content-Type": f"audio/{audio_format}"
+        }
         
         # Read audio file as binary
         with open(audio_file_path, "rb") as f:
