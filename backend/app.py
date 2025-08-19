@@ -39,15 +39,15 @@ app.config["JWT_CSRF_IN_COOKIES"] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-strong-production-secret-key-change-this')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
-# File upload configuration
+
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = '/tmp/audio_files' 
 
-# Initialize extensions
+
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
-# Create upload folder
+
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # --- MongoDB Connection ---
@@ -60,7 +60,7 @@ def init_mongodb():
             return None
             
         client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
-        # Test connection
+       
         client.server_info()
         db = client.get_database()
         print("MongoDB connection successful!")
@@ -74,10 +74,10 @@ def init_mongodb():
         print(f" MongoDB connection error: {e}")
         return None
 
-# Global MongoDB instance
+
 db = init_mongodb()
 
-# JWT error handlers
+
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_payload):
     return jsonify({"error": "Token has expired"}), 401
@@ -90,7 +90,7 @@ def invalid_token_callback(error):
 def missing_token_callback(error):
     return jsonify({"error": "Authorization token is required"}), 401
 
-# --- API Keys ---
+
 HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
@@ -277,7 +277,7 @@ def transcribe_with_whisper_large_v3(audio_file_path):
             print("Model loading, retrying in 10 seconds...")
             import time
             time.sleep(10)
-            # Retry once
+          
             response = requests.post(API_URL, headers=headers, data=audio_data, timeout=120)
             if response.status_code == 200:
                 result = response.json()
@@ -330,7 +330,7 @@ def convert_to_wav(input_path, output_path):
     Convert audio to WAV format for better processing
     """
     try:
-        # Try using simple conversion first
+        # Trying simple conversion first
         with open(input_path, 'rb') as f:
             audio_data = f.read()
         
@@ -349,9 +349,9 @@ def get_audio_duration(audio_path):
     """
     try:
         file_size = os.path.getsize(audio_path)
-        # Rough estimate: 1 second ≈ 16KB for compressed audio
+        
         estimated_duration = max(1.0, file_size / 16000)
-        return min(estimated_duration, 600)  # Cap at 10 minutes
+        return min(estimated_duration, 600) 
     except:
         return 30.0  # Default fallback
 
@@ -536,15 +536,15 @@ def transcribe_audio():
         filename = f"recording_{timestamp}{original_ext}"
         file_path = os.path.join(user_audio_dir, filename)
         
-        # Save uploaded file
+       
         audio_file.save(file_path)
         print(f"Audio file saved: {file_path} ({os.path.getsize(file_path)} bytes)")
         
-        # Get audio duration
+        
         duration_seconds = get_audio_duration(file_path)
         print(f"Estimated duration: {duration_seconds:.1f} seconds")
         
-        # Convert to WAV if needed (for better processing)
+        # Converting to WAV (for better processing)
         wav_filename = f"recording_{timestamp}.wav"
         wav_path = os.path.join(user_audio_dir, wav_filename)
         
@@ -582,7 +582,7 @@ def transcribe_audio():
         # Clean up temporary files
         try:
             if transcription_path != file_path and os.path.exists(file_path):
-                os.remove(file_path)  # Remove original if we converted
+                os.remove(file_path) 
         except:
             pass
         
@@ -598,7 +598,7 @@ def transcribe_audio():
         print(f"Transcription error: {e}")
         traceback.print_exc()
         
-        # Cleanup on error
+        
         try:
             if 'file_path' in locals() and os.path.exists(file_path):
                 os.remove(file_path)
@@ -629,7 +629,7 @@ def update_transcript(transcript_id):
         if 'text' in data:
             updates['text'] = data['text'].strip()
             
-            # Recalculate analysis if text changed
+            
             try:
                 audio_path = os.path.join(
                     app.config['UPLOAD_FOLDER'], 
@@ -664,7 +664,7 @@ def delete_transcript(transcript_id):
         if not transcript or str(transcript['user_id']) != current_user_id:
             return jsonify({"error": "Transcript not found or unauthorized"}), 403
         
-        # Delete audio file if it exists
+        
         if transcript.get('audio_filename'):
             audio_path = os.path.join(
                 app.config['UPLOAD_FOLDER'], 
@@ -674,7 +674,7 @@ def delete_transcript(transcript_id):
             try:
                 if os.path.exists(audio_path):
                     os.remove(audio_path)
-                    print(f"🗑️ Deleted audio file: {audio_path}")
+                    print(f"Deleted audio file: {audio_path}")
             except Exception as e:
                 print(f"Error deleting audio file: {e}")
         

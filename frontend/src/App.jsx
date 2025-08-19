@@ -12,7 +12,7 @@ import bg99 from './assets/bg99.png';
 // **PRODUCTION API URL - CHANGE THIS FOR DEPLOYMENT**
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
-console.log('API URL:', API_URL);
+
 
 
 const TrashIcon = ({ className }) => (
@@ -179,7 +179,7 @@ function AuthModal({ onLoginSuccess, closeModal }) {
             : { username: username.trim(), email: email.trim(), password };
         
         try {
-            console.log(`Making request to: ${API_URL}${endpoint}`);
+            
             
             const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
@@ -192,7 +192,7 @@ function AuthModal({ onLoginSuccess, closeModal }) {
             });
 
             const data = await response.json();
-            console.log('Response:', { status: response.status, data });
+            
 
             if (!response.ok) {
                 throw new Error(data.error || `Server error: ${response.status}`);
@@ -200,7 +200,7 @@ function AuthModal({ onLoginSuccess, closeModal }) {
 
             if (isLoginView) {
                 if (data.access_token) {
-                    console.log('Login successful, token received');
+                    
                     onLoginSuccess(data.access_token);
                     closeModal();
                 } else {
@@ -212,7 +212,7 @@ function AuthModal({ onLoginSuccess, closeModal }) {
                 setPassword('');
             }
         } catch (err) {
-            console.error('Auth error:', err);
+           
             setError(err.message || 'Connection failed. Please try again.');
         } finally {
             setIsSubmitting(false);
@@ -326,7 +326,7 @@ function Dashboard({ userToken, navigateTo }) {
         });
         
         if (response.status === 401) {
-            console.log('Session expired, logging out');
+            
             tokenStorage.removeToken();
             navigateTo('logout');
             throw new Error('Session expired. Please log in again.');
@@ -346,7 +346,7 @@ function Dashboard({ userToken, navigateTo }) {
             setIsLoadingTranscripts(true);
             setError('');
             try {
-                console.log('Fetching transcripts...');
+           
                 const response = await makeAuthenticatedRequest(`${API_URL}/api/transcripts`);
                 
                 if (!response.ok) {
@@ -354,10 +354,10 @@ function Dashboard({ userToken, navigateTo }) {
                 }
                 
                 const data = await response.json();
-                console.log('Transcripts fetched:', data.length);
+             
                 setTranscripts(data);
             } catch (error) {
-                console.error('Fetch transcripts error:', error);
+                
                 if (error.message !== 'Session expired. Please log in again.') {
                     setError(error.message);
                 }
@@ -405,10 +405,10 @@ function Dashboard({ userToken, navigateTo }) {
                 try {
                     setRecordingStatus(`Trying microphone configuration ${i + 1}...`);
                     stream = await navigator.mediaDevices.getUserMedia(constraints[i]);
-                    console.log(`Audio stream acquired with constraint ${i + 1}`);
+                  
                     break;
                 } catch (err) {
-                    console.log(`Constraint ${i + 1} failed:`, err.message);
+                   
                     lastError = err;
                     continue;
                 }
@@ -434,7 +434,7 @@ function Dashboard({ userToken, navigateTo }) {
             for (const type of possibleTypes) {
                 if (MediaRecorder.isTypeSupported(type)) {
                     mimeType = type;
-                    console.log('Using audio format:', mimeType);
+              
                     break;
                 }
             }
@@ -454,20 +454,20 @@ function Dashboard({ userToken, navigateTo }) {
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
-                    console.log('Audio chunk recorded:', event.data.size, 'bytes');
+                    
                 }
             };
             
             mediaRecorder.onstop = handleRecordingStop;
             
             mediaRecorder.onerror = (event) => {
-                console.error('MediaRecorder error:', event.error);
+        
                 setError(`Recording error: ${event.error?.message || 'Unknown error'}`);
                 handleStopRecording();
             };
             
             mediaRecorder.onstart = () => {
-                console.log('Recording started successfully');
+                
                 setRecordingStatus('Recording - Speak now!');
             };
             
@@ -477,7 +477,7 @@ function Dashboard({ userToken, navigateTo }) {
             setIsRecording(true);
             
         } catch (err) {
-            console.error('Recording start error:', err);
+           
             
             let errorMessage = 'Recording failed: ';
             if (err.name === 'NotAllowedError') {
@@ -504,7 +504,7 @@ function Dashboard({ userToken, navigateTo }) {
     };
 
     const handleStopRecording = () => {
-        console.log('Stopping recording...');
+
         
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
             setRecordingStatus('Stopping recording...');
@@ -515,7 +515,7 @@ function Dashboard({ userToken, navigateTo }) {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => {
                 track.stop();
-                console.log('Audio track stopped');
+              
             });
             streamRef.current = null;
         }
@@ -524,7 +524,7 @@ function Dashboard({ userToken, navigateTo }) {
     };
     
     const handleRecordingStop = async () => {
-        console.log('Recording stopped, processing audio...');
+        
         setIsLoadingTranscript(true);
         setError('');
         setRecordingStatus('Processing audio...');
@@ -534,14 +534,14 @@ function Dashboard({ userToken, navigateTo }) {
                 throw new Error('No audio data recorded. Please try again.');
             }
             
-            console.log('Audio chunks collected:', audioChunksRef.current.length);
+            
             
             // Create audio blob
             const audioBlob = new Blob(audioChunksRef.current, { 
                 type: mediaRecorderRef.current.mimeType 
             });
             
-            console.log('Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
+           
             
             if (audioBlob.size < 1000) { // Less than 1KB is probably too short
                 throw new Error('Recording too short. Please record for at least 3-5 seconds.');
@@ -554,7 +554,7 @@ function Dashboard({ userToken, navigateTo }) {
             const filename = `recording.${audioBlob.type.includes('webm') ? 'webm' : 'wav'}`;
             formData.append('audio', audioBlob, filename);
             
-            console.log('Uploading audio for transcription...');
+            
             
             const response = await makeAuthenticatedRequest(`${API_URL}/api/transcribe`, { 
                 method: 'POST', 
@@ -567,7 +567,7 @@ function Dashboard({ userToken, navigateTo }) {
             }
             
             const newTranscript = await response.json();
-            console.log('Transcription successful:', newTranscript);
+            
             
             // Update state
             setTranscripts(prev => [newTranscript, ...prev]);
@@ -575,7 +575,7 @@ function Dashboard({ userToken, navigateTo }) {
             setRecordingStatus('');
             
         } catch (error) {
-            console.error('Recording processing error:', error);
+            
             setError(error.message);
             setRecordingStatus('');
         } finally {
@@ -863,8 +863,8 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                     ) : (
                         <>
                             <button onClick={() => setIsEditing(true)} title="Edit transcript" style={{
-                                background: '#007aff',
-                                color: 'white',
+                                background: '#e2e8f0',
+                                color: '#475569',
                                 border: 'none',
                                 borderRadius: '6px',
                                 padding: '6px 12px',
@@ -878,11 +878,11 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                                     verticalAlign: 'middle',
                                     marginRight: '4px'
                                 }}/>
-                                Edit
+                                
                             </button>
                             <button onClick={() => onDelete(transcript.id)} title="Delete transcript" style={{
-                                background: '#ff3b30',
-                                color: 'white',
+                                background: '#e2e8f0',
+                                color: '#475569',
                                 border: 'none',
                                 borderRadius: '6px',
                                 padding: '6px 12px',
@@ -895,7 +895,7 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                                     verticalAlign: 'middle',
                                     marginRight: '4px'
                                 }}/>
-                                Delete
+                                
                             </button>
                         </>
                     )}
@@ -989,16 +989,16 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                     }}>
                         <div className="analysis-item" style={{
                             padding: isMobile ? '12px' : '16px',
-                            backgroundColor: '#f0f9ff',
+                            backgroundColor: '#f8f9fa',
                             borderRadius: '8px',
-                            border: '1px solid #bae6fd',
+                            border: '1px solid #e5e7eb',
                             textAlign: 'center'
                         }}>
                             <p style={{
                                 fontSize: isMobile ? '18px' : '24px',
                                 fontWeight: 'bold',
                                 margin: '0 0 4px 0',
-                                color: '#0369a1'
+                                color: '#111827'
                             }}>
                                 {transcript.word_count || 0}
                             </p>
@@ -1013,16 +1013,16 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                         
                         <div className="analysis-item" style={{
                             padding: isMobile ? '12px' : '16px',
-                            backgroundColor: '#f0fdf4',
+                            backgroundColor: '#f8f9fa',
                             borderRadius: '8px',
-                            border: '1px solid #bbf7d0',
+                            border: '1px solid #e5e7eb',
                             textAlign: 'center'
                         }}>
                             <p style={{
                                 fontSize: isMobile ? '18px' : '24px',
                                 fontWeight: 'bold',
                                 margin: '0 0 4px 0',
-                                color: '#166534'
+                                color: '#111827'
                             }}>
                                 {transcript.sentence_count || 0}
                             </p>
@@ -1037,16 +1037,16 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                         
                         <div className="analysis-item" style={{
                             padding: isMobile ? '12px' : '16px',
-                            backgroundColor: '#fef3c7',
+                            backgroundColor: '#f8f9fa',
                             borderRadius: '8px',
-                            border: '1px solid #fde68a',
+                            border: '1px solid #e5e7eb',
                             textAlign: 'center'
                         }}>
                             <p style={{
                                 fontSize: isMobile ? '18px' : '24px',
                                 fontWeight: 'bold',
                                 margin: '0 0 4px 0',
-                                color: '#b45309'
+                                color: '#111827'
                             }}>
                                 {transcript.speech_rate || 0}
                             </p>
@@ -1061,16 +1061,16 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                         
                         <div className="analysis-item" style={{
                             padding: isMobile ? '12px' : '16px',
-                            backgroundColor: '#fce7f3',
+                            backgroundColor: '#f8f9fa',
                             borderRadius: '8px',
-                            border: '1px solid #f9a8d4',
+                            border: '1px solid #e5e7eb',
                             textAlign: 'center'
                         }}>
                             <p style={{
                                 fontSize: isMobile ? '18px' : '24px',
                                 fontWeight: 'bold',
                                 margin: '0 0 4px 0',
-                                color: '#be185d'
+                                color: '#111827'
                             }}>
                                 {transcript.avg_words_per_sentence || 0}
                             </p>
@@ -1084,36 +1084,6 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                         </div>
                     </div>
                     
-                    {/* Additional insights */}
-                    <div style={{
-                        marginTop: '1rem',
-                        padding: '1rem',
-                        backgroundColor: '#f1f5f9',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1'
-                    }}>
-                        <h5 style={{
-                            fontSize: isMobile ? '14px' : '16px',
-                            margin: '0 0 8px 0',
-                            color: '#374151',
-                            fontWeight: '600'
-                        }}>
-                            Speech Insights:
-                        </h5>
-                        <div style={{
-                            fontSize: isMobile ? '13px' : '14px',
-                            color: '#64748b',
-                            lineHeight: '1.5'
-                        }}>
-                            {transcript.speech_rate < 120 ? 'Speaking pace is quite slow - consider speaking faster for better engagement.' :
-                             transcript.speech_rate > 200 ? 'Speaking pace is very fast - consider slowing down for clarity.' :
-                             'Speaking pace is within a good range for clear communication.'}
-                            <br />
-                            {transcript.avg_words_per_sentence < 10 ? ' Short sentences - good for clarity and emphasis.' :
-                             transcript.avg_words_per_sentence > 20 ? 'Long sentences - consider breaking them up for better flow.' :
-                             'Sentence length is well-balanced.'}
-                        </div>
-                    </div>
                 </div>
             )}
         </div>
