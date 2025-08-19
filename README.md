@@ -14,27 +14,27 @@ Directly visit this link to test applicaiton: https://research-project-testing-1
 
 python -m venv venv
 
-# Activate (Windows)
+Activate (Windows)
 venv\Scripts\activate
 
-# Activate (Mac/Linux)
+Activate (Mac/Linux)
 source venv/bin/activate
 
 4. Inside the virtual environmnet, install dependicies: pip install flask flask-bcrypt flask-jwt-extended flask-cors python-dotenv pymongo requests openai
 5. Setup MongoDB Dataabase and get API Keys from MongoDB, Hugging Face ad Open AI
 6. Create .env file in backend and provide environment variables in this form:
 
-# Required: MongoDB Atlas Connection String
+Required: MongoDB Atlas Connection String
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/transcribed_ai?retryWrites=true&w=majority
 
-# Required: JWT Secret (use any random string)
+Required: JWT Secret (use any random string)
 JWT_SECRET_KEY=your-random-secret-key-here
 
-# Required: At least one API key for transcription
+Required: At least one API key for transcription
 HUGGINGFACE_API_KEY=hf_your_token_here
 OPENAI_API_KEY=sk_your_openai_key_here
 
-# Optional: Custom port
+Optional: Custom port
 PORT=5001
 
 7. In a different VSCode terminal: cd frontend
