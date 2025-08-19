@@ -9,19 +9,53 @@ import bg7 from './assets/bg7.jpg';
 import bg10 from './assets/bg10.jpg';
 import bg99 from './assets/bg99.png';
 
-const API_URL = 'https://research-project-testing-1-production.up.railway.app' ;
+// **PRODUCTION API URL - CHANGE THIS FOR DEPLOYMENT**
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
-const TrashIcon = ({ className }) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>);
-const EditIcon = ({ className }) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>);
+console.log('API URL:', API_URL);
+
+
+const TrashIcon = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+    </svg>
+);
+
+const EditIcon = ({ className }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+    </svg>
+);
+
+// **SECURE TOKEN STORAGE - Using memory only, no localStorage**
+class TokenStorage {
+    constructor() {
+        this.token = null;
+    }
+    
+    setToken(token) {
+        this.token = token;
+    }
+    
+    getToken() {
+        return this.token;
+    }
+    
+    removeToken() {
+        this.token = null;
+    }
+}
+
+const tokenStorage = new TokenStorage();
 
 // --- Main App Component ---
 export default function App() {
-    const [page, setPage] = useState('home');
+    const [page, setPage] = useState('loading');
     const [userToken, setUserToken] = useState(null);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = null; // localStorage.getItem('token');
+        // Check if user was logged in (in memory only)
+        const token = tokenStorage.getToken();
         
         if (token) {
             setUserToken(token);
@@ -29,12 +63,11 @@ export default function App() {
         } else {
             setPage('home');
         }
-        setLoading(false);
     }, []);
 
     const navigateTo = (targetPage) => {
         if (targetPage === 'logout') {
-            // localStorage.removeItem('token');
+            tokenStorage.removeToken();
             setUserToken(null);
             setPage('home');
         } else {
@@ -43,12 +76,12 @@ export default function App() {
     };
     
     const handleLoginSuccess = (token) => {
-        // localStorage.setItem('token', token);
+        tokenStorage.setToken(token);
         setUserToken(token);
         setPage('dashboard');
     };
 
-    if (loading) {
+    if (page === 'loading') {
         return <div className="loading-screen">Loading...</div>;
     }
 
@@ -61,7 +94,7 @@ export default function App() {
     }
 }
 
-// --- HomePage ---
+// --- HomePage Component (Same styling) ---
 function HomePage({ onLoginSuccess }) {
     const [bgIndex, setBgIndex] = useState(0);
     const [isFormVisible, setIsFormVisible] = useState(false);
@@ -90,7 +123,7 @@ function HomePage({ onLoginSuccess }) {
     );
 }
 
-// --- AuthModal ---
+// --- Enhanced AuthModal with Better Error Handling ---
 function AuthModal({ onLoginSuccess, closeModal }) {
     const [isLoginView, setIsLoginView] = useState(true);
     const [email, setEmail] = useState('');
@@ -98,9 +131,6 @@ function AuthModal({ onLoginSuccess, closeModal }) {
     const [username, setUsername] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-
-
 
     const handleViewToggle = () => {
         if (isSubmitting) return; 
@@ -111,45 +141,79 @@ function AuthModal({ onLoginSuccess, closeModal }) {
         setIsLoginView(!isLoginView);
     };
 
+    const validateInput = () => {
+        if (!email.trim()) {
+            setError('Email is required');
+            return false;
+        }
+        
+        if (!email.includes('@')) {
+            setError('Please enter a valid email');
+            return false;
+        }
+        
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters');
+            return false;
+        }
+        
+        if (!isLoginView && username.trim().length < 2) {
+            setError('Username must be at least 2 characters');
+            return false;
+        }
+        
+        return true;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        
+        if (!validateInput()) return;
+        
         setIsSubmitting(true);
         
         const endpoint = isLoginView ? '/api/login' : '/api/signup';
-        const payload = isLoginView ? { email, password } : { username, email, password };
+        const payload = isLoginView 
+            ? { email: email.trim(), password } 
+            : { username: username.trim(), email: email.trim(), password };
         
         try {
+            console.log(`Making request to: ${API_URL}${endpoint}`);
+            
             const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-                throw new Error(errorData.error || `Server error: ${response.status}`);
-            }
-
             const data = await response.json();
+            console.log('Response:', { status: response.status, data });
+
+            if (!response.ok) {
+                throw new Error(data.error || `Server error: ${response.status}`);
+            }
 
             if (isLoginView) {
                 if (data.access_token) {
+                    console.log('Login successful, token received');
                     onLoginSuccess(data.access_token);
                     closeModal();
                 } else {
-                    throw new Error('No access token received');
+                    throw new Error('Login failed - no token received');
                 }
             } else {
-                alert("Sign up successful! Please log in.");
+                alert("Account created successfully! Please log in.");
                 setIsLoginView(true);
+                setPassword('');
             }
         } catch (err) {
-            setError(err.message);
+            console.error('Auth error:', err);
+            setError(err.message || 'Connection failed. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -161,17 +225,54 @@ function AuthModal({ onLoginSuccess, closeModal }) {
                 <div className="logo">Transcribed AI</div>
                 <h2 className="title">{isLoginView ? 'Welcome Back' : 'Create an Account'}</h2>
                 <form onSubmit={handleSubmit}>
-                    {!isLoginView && <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isSubmitting}/>}
-                    <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isSubmitting}/>
-                    <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isSubmitting}/>
-                    {error && <p style={{color: 'red', fontSize: '14px', marginBottom: '15px'}}>{error}</p>}
+                    {!isLoginView && (
+                        <input 
+                            type="text" 
+                            placeholder="Username" 
+                            value={username} 
+                            onChange={(e) => setUsername(e.target.value)} 
+                            required 
+                            disabled={isSubmitting}
+                            minLength={2}
+                        />
+                    )}
+                    <input 
+                        type="email" 
+                        placeholder="Email" 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                        required 
+                        disabled={isSubmitting}
+                    />
+                    <input 
+                        type="password" 
+                        placeholder="Password" 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        required 
+                        disabled={isSubmitting}
+                        minLength={6}
+                    />
+                    {error && (
+                        <p style={{
+                            color: '#ff3b30', 
+                            fontSize: '14px', 
+                            marginBottom: '15px',
+                            padding: '8px',
+                            backgroundColor: '#ffe6e6',
+                            borderRadius: '4px',
+                            border: '1px solid #ffcccc'
+                        }}>
+                            {error}
+                        </p>
+                    )}
                     <button type="submit" className="submit-btn" disabled={isSubmitting}>
                         {isSubmitting ? 'Processing...' : (isLoginView ? 'Log In' : 'Sign Up')}
                     </button>
                 </form>
                 <div className="toggle-view">
                     {isLoginView ? "Don't have an account? " : "Already have an account? "}
-                    <span onClick={handleViewToggle}>
+                    <span onClick={handleViewToggle} style={{ cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>
                         {isLoginView ? 'Sign Up' : 'Log In'}
                     </span>
                 </div>
@@ -180,7 +281,7 @@ function AuthModal({ onLoginSuccess, closeModal }) {
     );
 }
 
-// --- ENHANCED RESPONSIVE Dashboard with Proper Audio Recording ---
+// --- Enhanced Dashboard Component ---
 function Dashboard({ userToken, navigateTo }) {
     const [transcripts, setTranscripts] = useState([]);
     const [selectedTranscript, setSelectedTranscript] = useState(null);
@@ -190,11 +291,11 @@ function Dashboard({ userToken, navigateTo }) {
     const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(true);
     const [recordingStatus, setRecordingStatus] = useState('');
     const [isMobile, setIsMobile] = useState(false);
+    
+    // Audio recording refs
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const streamRef = useRef(null);
-    const analyzerRef = useRef(null);
-    const animationFrameRef = useRef(null);
 
     // Enhanced mobile detection
     useEffect(() => {
@@ -210,36 +311,53 @@ function Dashboard({ userToken, navigateTo }) {
     }, []);
 
     const makeAuthenticatedRequest = useCallback(async (url, options = {}) => {
+        if (!userToken) {
+            throw new Error('No authentication token');
+        }
+
         const response = await fetch(url, {
             ...options,
             headers: {
                 'Authorization': `Bearer ${userToken}`,
                 'Accept': 'application/json',
                 ...options.headers
-            }
+            },
+            credentials: 'include'
         });
+        
         if (response.status === 401) {
-            // localStorage.removeItem('token');
+            console.log('Session expired, logging out');
+            tokenStorage.removeToken();
             navigateTo('logout');
             throw new Error('Session expired. Please log in again.');
         }
+        
         return response;
     }, [userToken, navigateTo]);
 
+    // Fetch transcripts on load
     useEffect(() => {
         if (!userToken) {
             setIsLoadingTranscripts(false);
             return;
         }
+        
         const fetchTranscripts = async () => {
             setIsLoadingTranscripts(true);
             setError('');
             try {
+                console.log('Fetching transcripts...');
                 const response = await makeAuthenticatedRequest(`${API_URL}/api/transcripts`);
-                if (!response.ok) throw new Error('Failed to fetch transcripts.');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch transcripts.');
+                }
+                
                 const data = await response.json();
+                console.log('Transcripts fetched:', data.length);
                 setTranscripts(data);
             } catch (error) {
+                console.error('Fetch transcripts error:', error);
                 if (error.message !== 'Session expired. Please log in again.') {
                     setError(error.message);
                 }
@@ -247,37 +365,28 @@ function Dashboard({ userToken, navigateTo }) {
                 setIsLoadingTranscripts(false);
             }
         };
+        
         fetchTranscripts();
     }, [userToken, makeAuthenticatedRequest]);
 
-    const stopAudioLevelMonitoring = () => {
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-        }
-        analyzerRef.current = null;
-    };
-    
-    // ENHANCED RECORDING START WITH COMPREHENSIVE DIAGNOSTICS
+    // Enhanced recording start with diagnostics
     const handleStartRecording = async () => {
         try {
             setError('');
-            setRecordingStatus('Running diagnostics...');
+            setRecordingStatus('Checking microphone access...');
             
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error('MediaDevices API not supported in this browser');
+                throw new Error('Microphone not supported in this browser');
             }
             
-            setRecordingStatus('Requesting microphone permission...');
-            
+            // Try different audio constraints for better compatibility
             const constraints = [
                 { 
                     audio: {
-                        echoCancellation: false,
-                        noiseSuppression: false,
-                        autoGainControl: false,
-                        sampleRate: 44100,
-                        channelCount: 1
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 44100
                     }
                 },
                 { 
@@ -294,26 +403,26 @@ function Dashboard({ userToken, navigateTo }) {
             
             for (let i = 0; i < constraints.length; i++) {
                 try {
+                    setRecordingStatus(`Trying microphone configuration ${i + 1}...`);
                     stream = await navigator.mediaDevices.getUserMedia(constraints[i]);
+                    console.log(`Audio stream acquired with constraint ${i + 1}`);
                     break;
                 } catch (err) {
+                    console.log(`Constraint ${i + 1} failed:`, err.message);
                     lastError = err;
                     continue;
                 }
             }
             
             if (!stream) {
-                throw lastError || new Error('Failed to get microphone access with any constraints');
+                throw lastError || new Error('Failed to access microphone');
             }
             
             streamRef.current = stream;
             
-            setRecordingStatus('Testing audio stream...');
+            setRecordingStatus('Configuring recorder...');
             
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            setRecordingStatus('Microphone ready, configuring recorder...');
-            
+            // Test supported formats
             const possibleTypes = [
                 'audio/webm;codecs=opus',
                 'audio/webm',
@@ -325,12 +434,13 @@ function Dashboard({ userToken, navigateTo }) {
             for (const type of possibleTypes) {
                 if (MediaRecorder.isTypeSupported(type)) {
                     mimeType = type;
+                    console.log('Using audio format:', mimeType);
                     break;
                 }
             }
             
             if (!mimeType) {
-                throw new Error('No supported audio format found');
+                throw new Error('No supported audio format found in this browser');
             }
             
             const mediaRecorder = new MediaRecorder(stream, {
@@ -344,42 +454,58 @@ function Dashboard({ userToken, navigateTo }) {
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
+                    console.log('Audio chunk recorded:', event.data.size, 'bytes');
                 }
             };
             
             mediaRecorder.onstop = handleRecordingStop;
             
             mediaRecorder.onerror = (event) => {
-                setError(`Recording error: ${event.error}`);
+                console.error('MediaRecorder error:', event.error);
+                setError(`Recording error: ${event.error?.message || 'Unknown error'}`);
                 handleStopRecording();
             };
             
             mediaRecorder.onstart = () => {
+                console.log('Recording started successfully');
+                setRecordingStatus('Recording - Speak now!');
             };
             
-            mediaRecorder.start(50); // Every 50ms for maximum data collection
+            // Start recording with small intervals for better data collection
+            mediaRecorder.start(100); // 100ms intervals
             
             setIsRecording(true);
-            setRecordingStatus('Recording active - Speak now!');
             
         } catch (err) {
+            console.error('Recording start error:', err);
+            
+            let errorMessage = 'Recording failed: ';
             if (err.name === 'NotAllowedError') {
-                setError("Microphone permission denied. Please allow microphone access and refresh the page.");
+                errorMessage += "Microphone permission denied. Please allow microphone access and refresh.";
             } else if (err.name === 'NotFoundError') {
-                setError("No microphone found. Please connect a microphone and try again.");
+                errorMessage += "No microphone found. Please connect a microphone.";
             } else if (err.name === 'NotReadableError') {
-                setError("Microphone is being used by another application. Please close other apps using the microphone.");
+                errorMessage += "Microphone is being used by another application.";
             } else if (err.name === 'OverconstrainedError') {
-                setError("Microphone doesn't support the required settings. Try a different microphone.");
+                errorMessage += "Microphone doesn't support the required settings.";
             } else {
-                setError(`Recording failed: ${err.message}`);
+                errorMessage += err.message;
             }
+            
+            setError(errorMessage);
             setRecordingStatus('');
-            stopAudioLevelMonitoring();
+            
+            // Cleanup
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
+            }
         }
     };
 
     const handleStopRecording = () => {
+        console.log('Stopping recording...');
+        
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
             setRecordingStatus('Stopping recording...');
             mediaRecorderRef.current.stop();
@@ -389,40 +515,46 @@ function Dashboard({ userToken, navigateTo }) {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => {
                 track.stop();
+                console.log('Audio track stopped');
             });
             streamRef.current = null;
         }
         
-        stopAudioLevelMonitoring();
         setIsRecording(false);
     };
     
     const handleRecordingStop = async () => {
+        console.log('Recording stopped, processing audio...');
         setIsLoadingTranscript(true);
         setError('');
         setRecordingStatus('Processing audio...');
         
         try {
             if (audioChunksRef.current.length === 0) {
-                throw new Error('No audio data was recorded. Please check your microphone and try again.');
+                throw new Error('No audio data recorded. Please try again.');
             }
             
-            // Create blob from chunks
+            console.log('Audio chunks collected:', audioChunksRef.current.length);
+            
+            // Create audio blob
             const audioBlob = new Blob(audioChunksRef.current, { 
                 type: mediaRecorderRef.current.mimeType 
             });
             
-            if (audioBlob.size < 100) { 
-                throw new Error('Recording too short. Please record for at least 2-3 seconds.');
+            console.log('Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
+            
+            if (audioBlob.size < 1000) { // Less than 1KB is probably too short
+                throw new Error('Recording too short. Please record for at least 3-5 seconds.');
             }
             
-            setRecordingStatus('Uploading and transcribing...');
+            setRecordingStatus('Uploading and transcribing with Whisper Large V3...');
             
-            // Test the blob by creating a URL
-            const audioUrl = URL.createObjectURL(audioBlob);
-            
+            // Prepare form data
             const formData = new FormData();
-            formData.append('audio', audioBlob, `recording.${audioBlob.type.includes('webm') ? 'webm' : 'wav'}`);
+            const filename = `recording.${audioBlob.type.includes('webm') ? 'webm' : 'wav'}`;
+            formData.append('audio', audioBlob, filename);
+            
+            console.log('Uploading audio for transcription...');
             
             const response = await makeAuthenticatedRequest(`${API_URL}/api/transcribe`, { 
                 method: 'POST', 
@@ -435,14 +567,15 @@ function Dashboard({ userToken, navigateTo }) {
             }
             
             const newTranscript = await response.json();
+            console.log('Transcription successful:', newTranscript);
             
-            URL.revokeObjectURL(audioUrl);
-            
+            // Update state
             setTranscripts(prev => [newTranscript, ...prev]);
             setSelectedTranscript(newTranscript);
             setRecordingStatus('');
             
         } catch (error) {
+            console.error('Recording processing error:', error);
             setError(error.message);
             setRecordingStatus('');
         } finally {
@@ -453,14 +586,22 @@ function Dashboard({ userToken, navigateTo }) {
     };
 
     const handleDeleteTranscript = async (id) => {
-        if (window.confirm("Are you sure you want to delete this transcript?")) {
-            try {
-                await makeAuthenticatedRequest(`${API_URL}/api/transcripts/${id}`, { method: 'DELETE' });
-                setTranscripts(prev => prev.filter(t => t.id !== id));
-                if (selectedTranscript?.id === id) setSelectedTranscript(null);
-            } catch {
-                setError("Failed to delete transcript.");
+        if (!window.confirm("Are you sure you want to delete this transcript and its audio?")) {
+            return;
+        }
+        
+        try {
+            await makeAuthenticatedRequest(`${API_URL}/api/transcripts/${id}`, { 
+                method: 'DELETE' 
+            });
+            
+            setTranscripts(prev => prev.filter(t => t.id !== id));
+            if (selectedTranscript?.id === id) {
+                setSelectedTranscript(null);
             }
+        } catch (error) {
+            console.error('Delete error:', error);
+            setError("Failed to delete transcript.");
         }
     };
 
@@ -469,14 +610,23 @@ function Dashboard({ userToken, navigateTo }) {
             await makeAuthenticatedRequest(`${API_URL}/api/transcripts/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newName, text: newText })
+                body: JSON.stringify({ 
+                    name: newName.trim(), 
+                    text: newText.trim() 
+                })
             });
+            
+            // Refresh transcripts list
             const listResponse = await makeAuthenticatedRequest(`${API_URL}/api/transcripts`);
             const data = await listResponse.json();
             setTranscripts(data);
+            
             const updatedTranscript = data.find(t => t.id === id);
-            if (updatedTranscript) setSelectedTranscript(updatedTranscript);
-        } catch {
+            if (updatedTranscript) {
+                setSelectedTranscript(updatedTranscript);
+            }
+        } catch (error) {
+            console.error('Update error:', error);
             setError("Failed to update transcript.");
         }
     };
@@ -485,86 +635,132 @@ function Dashboard({ userToken, navigateTo }) {
         <div className="dashboard-container">
             <header className="dashboard-header">
                 <h1>Transcribed AI Dashboard</h1>
-                <button onClick={() => navigateTo('logout')} className="logout-btn">Log Out</button>
+                <button onClick={() => navigateTo('logout')} className="logout-btn">
+                    Log Out
+                </button>
             </header>
             <main className="dashboard-main">
                 <div className="transcripts-list">
                     <h2>My Transcripts</h2>
-                    {error && <div style={{color: 'red', marginBottom: '1rem', fontSize: '0.9rem', padding: '0.5rem', backgroundColor: '#ffe6e6', borderRadius: '4px'}}>{error}</div>}
+                    
+                    {error && (
+                        <div style={{
+                            color: '#ff3b30', 
+                            marginBottom: '1rem', 
+                            fontSize: '0.9rem', 
+                            padding: '0.75rem', 
+                            backgroundColor: '#ffe6e6', 
+                            borderRadius: '6px',
+                            border: '1px solid #ffcccc'
+                        }}>
+                            {error}
+                        </div>
+                    )}
+                    
                     <div className="list-container">
                         {isLoadingTranscripts ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>Loading...</div>
+                            <div style={{ 
+                                textAlign: 'center', 
+                                padding: '2rem', 
+                                color: '#888' 
+                            }}>
+                                Loading transcripts...
+                            </div>
                         ) : transcripts.length > 0 ? (
                             transcripts.map(t => (
-                                <div key={t.id} onClick={() => setSelectedTranscript(t)} className={`transcript-item ${selectedTranscript?.id === t.id ? 'selected' : ''}`}>
+                                <div 
+                                    key={t.id} 
+                                    onClick={() => setSelectedTranscript(t)} 
+                                    className={`transcript-item ${selectedTranscript?.id === t.id ? 'selected' : ''}`}
+                                >
                                     <p className="item-name">{t.name}</p>
-                                    <p className="item-text">{t.text}</p>
+                                    <p className="item-text">
+                                        {t.text.length > 100 ? `${t.text.substring(0, 100)}...` : t.text}
+                                    </p>
                                 </div>
                             ))
                         ) : (
                             <div className="empty-list">
                                 <p>You have no transcripts yet.</p>
-                                <p style={{fontSize: '0.9rem', color: '#666'}}>Click "Add Recording" to create your first transcript!</p>
+                                <p style={{fontSize: '0.9rem', color: '#666'}}>
+                                    Click "Start Recording" to create your first transcript!
+                                </p>
                             </div>
                         )}
                     </div>
                 </div>
+                
                 <div className="main-content">
                     <div className="recording-section">
                         {!isRecording && !isLoadingTranscript && (
-                            <button onClick={handleStartRecording} className="record-btn start" style={{
-                                padding: isMobile ? '10px 20px' : '12px 24px',
-                                fontSize: isMobile ? '14px' : '16px',
-                                backgroundColor: '#4CAF50',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer'
-                            }}>
-                                Add Recording
-                            </button>
-                        )}
-                        {isRecording && (
-                            <div style={{ textAlign: 'center' }}>
-                                <button onClick={handleStopRecording} className="record-btn stop" style={{
+                            <button 
+                                onClick={handleStartRecording} 
+                                className="record-btn start"
+                                style={{
                                     padding: isMobile ? '10px 20px' : '12px 24px',
                                     fontSize: isMobile ? '14px' : '16px',
-                                    backgroundColor: '#f44336',
+                                    backgroundColor: '#34c759',
                                     color: 'white',
                                     border: 'none',
-                                    borderRadius: '8px',
+                                    borderRadius: '25px',
                                     cursor: 'pointer',
-                                    animation: 'pulse 1s infinite'
-                                }}>
-                                       Stop Recording
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                Start Recording
+                            </button>
+                        )}
+                        
+                        {isRecording && (
+                            <div style={{ textAlign: 'center' }}>
+                                <button 
+                                    onClick={handleStopRecording} 
+                                    className="record-btn stop"
+                                    style={{
+                                        padding: isMobile ? '10px 20px' : '12px 24px',
+                                        fontSize: isMobile ? '14px' : '16px',
+                                        backgroundColor: '#ff3b30',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '25px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    Stop Recording
                                 </button>
                             </div>
                         )}
+                        
                         {isLoadingTranscript && (
-                            <div className="loading-text" style={{
+                            <div style={{
                                 padding: '20px',
                                 textAlign: 'center',
-                                color: '#666',
-                                fontSize: isMobile ? '14px' : '16px'
+                                color: '#007aff',
+                                fontSize: isMobile ? '14px' : '16px',
+                                fontWeight: '500'
                             }}>
-                                Generating transcript...
+                                Generating transcript with Whisper Large V3...
                             </div>
                         )}
+                        
                         {recordingStatus && (
                             <div style={{ 
                                 marginTop: '1rem', 
                                 padding: isMobile ? '10px' : '12px', 
                                 backgroundColor: '#e3f2fd', 
-                                borderRadius: '6px',
+                                borderRadius: '8px',
                                 color: '#1565c0',
                                 fontSize: isMobile ? '12px' : '14px',
                                 textAlign: 'center',
-                                border: '1px solid #bbdefb'
+                                border: '1px solid #bbdefb',
+                                fontWeight: '500'
                             }}>
                                 {recordingStatus}
                             </div>
                         )}
                     </div>
+                    
                     {selectedTranscript ? (
                         <ResponsiveTranscriptDetail 
                             transcript={selectedTranscript} 
@@ -574,7 +770,12 @@ function Dashboard({ userToken, navigateTo }) {
                         />
                     ) : (
                         <div className="placeholder-view">
-                            <p>{isMobile ? 'Select a transcript above' : 'Select a transcript to see its analysis.'}</p>
+                            <p>
+                                {isMobile 
+                                    ? 'Select a transcript above to view details' 
+                                    : 'Select a transcript to view its analysis and playback audio'
+                                }
+                            </p>
                         </div>
                     )}
                 </div>
@@ -583,6 +784,7 @@ function Dashboard({ userToken, navigateTo }) {
     );
 }
 
+// --- Enhanced Transcript Detail Component ---
 function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(transcript.name);
@@ -595,7 +797,15 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
     }, [transcript]);
 
     const handleSave = () => {
-        onUpdate(transcript.id, editedName, editedText);
+        if (editedName.trim() && editedText.trim()) {
+            onUpdate(transcript.id, editedName.trim(), editedText.trim());
+            setIsEditing(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setEditedName(transcript.name);
+        setEditedText(transcript.text);
         setIsEditing(false);
     };
 
@@ -611,86 +821,297 @@ function ResponsiveTranscriptDetail({ transcript, onDelete, onUpdate, isMobile }
                         style={{
                             fontSize: isMobile ? '1rem' : '1.25rem'
                         }}
+                        placeholder="Transcript name"
                     />
                 ) : (
                     <h3 style={{
-                        fontSize: isMobile ? '1rem' : '1.25rem'
-                    }}>{transcript.name}</h3>
+                        fontSize: isMobile ? '1rem' : '1.25rem',
+                        margin: 0,
+                        color: '#111827'
+                    }}>
+                        {transcript.name}
+                    </h3>
                 )}
+                
                 <div className="actions">
-                    <button onClick={() => setIsEditing(!isEditing)}>
-                        <EditIcon className="icon" style={{
-                            width: isMobile ? '1rem' : '1.25rem',
-                            height: isMobile ? '1rem' : '1.25rem'
-                        }}/>
-                    </button>
-                    <button onClick={() => onDelete(transcript.id)}>
-                        <TrashIcon className="icon" style={{
-                            width: isMobile ? '1rem' : '1.25rem',
-                            height: isMobile ? '1rem' : '1.25rem'
-                        }}/>
-                    </button>
+                    {isEditing ? (
+                        <>
+                            <button onClick={handleSave} title="Save changes" style={{
+                                background: '#34c759',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
+                                marginRight: '8px',
+                                cursor: 'pointer',
+                                fontSize: isMobile ? '12px' : '14px'
+                            }}>
+                                Save
+                            </button>
+                            <button onClick={handleCancel} title="Cancel editing" style={{
+                                background: '#ff3b30',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                fontSize: isMobile ? '12px' : '14px'
+                            }}>
+                                Cancel
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button onClick={() => setIsEditing(true)} title="Edit transcript" style={{
+                                background: '#007aff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
+                                marginRight: '8px',
+                                cursor: 'pointer',
+                                fontSize: isMobile ? '12px' : '14px'
+                            }}>
+                                <EditIcon className="icon" style={{
+                                    width: isMobile ? '1rem' : '1.25rem',
+                                    height: isMobile ? '1rem' : '1.25rem',
+                                    verticalAlign: 'middle',
+                                    marginRight: '4px'
+                                }}/>
+                                Edit
+                            </button>
+                            <button onClick={() => onDelete(transcript.id)} title="Delete transcript" style={{
+                                background: '#ff3b30',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                fontSize: isMobile ? '12px' : '14px'
+                            }}>
+                                <TrashIcon className="icon" style={{
+                                    width: isMobile ? '1rem' : '1.25rem',
+                                    height: isMobile ? '1rem' : '1.25rem',
+                                    verticalAlign: 'middle',
+                                    marginRight: '4px'
+                                }}/>
+                                Delete
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
+            
+          
             {transcript.audioUrl && (
-                <audio controls src={`${API_URL}${transcript.audioUrl}`} className="audio-player" style={{
-                    height: isMobile ? '40px' : '54px'
-                }}>
-                    Your browser does not support the audio element.
-                </audio>
-            )}
-            {isEditing ? (
-                <textarea 
-                    value={editedText} 
-                    onChange={(e) => setEditedText(e.target.value)} 
-                    className="text-editor"
-                    style={{
-                        minHeight: isMobile ? '100px' : '150px',
-                        fontSize: isMobile ? '14px' : '16px'
-                    }}
-                />
-            ) : (
-                <p className="transcript-text" style={{
-                    fontSize: isMobile ? '14px' : '16px'
-                }}>{transcript.text}</p>
-            )}
-            {isEditing && (
-                 <div className="save-actions">
-                    <button onClick={handleSave} className="save-btn" style={{
-                        fontSize: isMobile ? '14px' : '16px',
-                        padding: isMobile ? '8px 16px' : '12px 20px'
-                    }}>Save Changes</button>
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <audio 
+                        controls 
+                        src={`${API_URL}${transcript.audioUrl}`} 
+                        className="audio-player"
+                        style={{
+                            width: '100%',
+                            height: isMobile ? '40px' : '54px',
+                            borderRadius: '8px',
+                            backgroundColor: '#f5f5f5'
+                        }}
+                        preload="metadata"
+                    >
+                        Your browser does not support the audio element.
+                    </audio>
                 </div>
             )}
+            
+          
+            <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{
+                    fontSize: isMobile ? '14px' : '16px',
+                    margin: '0 0 8px 0',
+                    color: '#374151',
+                    fontWeight: '600'
+                }}>
+                    Transcript:
+                </h4>
+                {isEditing ? (
+                    <textarea 
+                        value={editedText} 
+                        onChange={(e) => setEditedText(e.target.value)} 
+                        className="text-editor"
+                        style={{
+                            minHeight: isMobile ? '120px' : '150px',
+                            fontSize: isMobile ? '14px' : '16px',
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '2px solid #007aff',
+                            borderRadius: '8px',
+                            resize: 'vertical',
+                            fontFamily: 'inherit',
+                            lineHeight: '1.5',
+                            outline: 'none'
+                        }}
+                        placeholder="Enter transcript text..."
+                    />
+                ) : (
+                    <div 
+                        className="transcript-text"
+                        style={{
+                            fontSize: isMobile ? '14px' : '16px',
+                            lineHeight: '1.6',
+                            padding: '1rem',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            color: '#374151'
+                        }}
+                    >
+                        {transcript.text || 'No transcript available'}
+                    </div>
+                )}
+            </div>
+            
+            
             {!isEditing && (
                 <div className="analysis-section">
                     <h4 style={{
-                        fontSize: isMobile ? '16px' : '18px'
-                    }}>Analysis</h4>
-                    <div className="analysis-grid">
-                        <div className="analysis-item">
+                        fontSize: isMobile ? '16px' : '18px',
+                        margin: '0 0 16px 0',
+                        color: '#374151',
+                        fontWeight: '600'
+                    }}>
+                        Speech Analysis:
+                    </h4>
+                    <div className="analysis-grid" style={{
+                        display: 'grid',
+                        gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+                        gap: isMobile ? '12px' : '16px'
+                    }}>
+                        <div className="analysis-item" style={{
+                            padding: isMobile ? '12px' : '16px',
+                            backgroundColor: '#f0f9ff',
+                            borderRadius: '8px',
+                            border: '1px solid #bae6fd',
+                            textAlign: 'center'
+                        }}>
                             <p style={{
-                                fontSize: isMobile ? '20px' : '24px'
-                            }}>{transcript.word_count || 0}</p>
-                            <span>Words</span>
+                                fontSize: isMobile ? '18px' : '24px',
+                                fontWeight: 'bold',
+                                margin: '0 0 4px 0',
+                                color: '#0369a1'
+                            }}>
+                                {transcript.word_count || 0}
+                            </p>
+                            <span style={{
+                                fontSize: isMobile ? '12px' : '14px',
+                                color: '#475569',
+                                fontWeight: '500'
+                            }}>
+                                Words
+                            </span>
                         </div>
-                        <div className="analysis-item">
+                        
+                        <div className="analysis-item" style={{
+                            padding: isMobile ? '12px' : '16px',
+                            backgroundColor: '#f0fdf4',
+                            borderRadius: '8px',
+                            border: '1px solid #bbf7d0',
+                            textAlign: 'center'
+                        }}>
                             <p style={{
-                                fontSize: isMobile ? '20px' : '24px'
-                            }}>{transcript.sentence_count || 0}</p>
-                            <span>Sentences</span>
+                                fontSize: isMobile ? '18px' : '24px',
+                                fontWeight: 'bold',
+                                margin: '0 0 4px 0',
+                                color: '#166534'
+                            }}>
+                                {transcript.sentence_count || 0}
+                            </p>
+                            <span style={{
+                                fontSize: isMobile ? '12px' : '14px',
+                                color: '#475569',
+                                fontWeight: '500'
+                            }}>
+                                Sentences
+                            </span>
                         </div>
-                        <div className="analysis-item">
+                        
+                        <div className="analysis-item" style={{
+                            padding: isMobile ? '12px' : '16px',
+                            backgroundColor: '#fef3c7',
+                            borderRadius: '8px',
+                            border: '1px solid #fde68a',
+                            textAlign: 'center'
+                        }}>
                             <p style={{
-                                fontSize: isMobile ? '20px' : '24px'
-                            }}>{transcript.speech_rate || 0}</p>
-                            <span>Words/Min</span>
+                                fontSize: isMobile ? '18px' : '24px',
+                                fontWeight: 'bold',
+                                margin: '0 0 4px 0',
+                                color: '#b45309'
+                            }}>
+                                {transcript.speech_rate || 0}
+                            </p>
+                            <span style={{
+                                fontSize: isMobile ? '12px' : '14px',
+                                color: '#475569',
+                                fontWeight: '500'
+                            }}>
+                                Words/Min
+                            </span>
                         </div>
-                        <div className="analysis-item">
+                        
+                        <div className="analysis-item" style={{
+                            padding: isMobile ? '12px' : '16px',
+                            backgroundColor: '#fce7f3',
+                            borderRadius: '8px',
+                            border: '1px solid #f9a8d4',
+                            textAlign: 'center'
+                        }}>
                             <p style={{
-                                fontSize: isMobile ? '20px' : '24px'
-                            }}>{transcript.avg_words_per_sentence || 0}</p>
-                            <span>Avg. Words/Sentence</span>
+                                fontSize: isMobile ? '18px' : '24px',
+                                fontWeight: 'bold',
+                                margin: '0 0 4px 0',
+                                color: '#be185d'
+                            }}>
+                                {transcript.avg_words_per_sentence || 0}
+                            </p>
+                            <span style={{
+                                fontSize: isMobile ? '12px' : '14px',
+                                color: '#475569',
+                                fontWeight: '500'
+                            }}>
+                                Avg Words/Sentence
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {/* Additional insights */}
+                    <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        backgroundColor: '#f1f5f9',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1'
+                    }}>
+                        <h5 style={{
+                            fontSize: isMobile ? '14px' : '16px',
+                            margin: '0 0 8px 0',
+                            color: '#374151',
+                            fontWeight: '600'
+                        }}>
+                            Speech Insights:
+                        </h5>
+                        <div style={{
+                            fontSize: isMobile ? '13px' : '14px',
+                            color: '#64748b',
+                            lineHeight: '1.5'
+                        }}>
+                            {transcript.speech_rate < 120 ? 'Speaking pace is quite slow - consider speaking faster for better engagement.' :
+                             transcript.speech_rate > 200 ? 'Speaking pace is very fast - consider slowing down for clarity.' :
+                             'Speaking pace is within a good range for clear communication.'}
+                            <br />
+                            {transcript.avg_words_per_sentence < 10 ? ' Short sentences - good for clarity and emphasis.' :
+                             transcript.avg_words_per_sentence > 20 ? 'Long sentences - consider breaking them up for better flow.' :
+                             'Sentence length is well-balanced.'}
                         </div>
                     </div>
                 </div>
