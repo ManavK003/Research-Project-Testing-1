@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './HomePage.css';
 
-import bg1 from './assets/bg1.jpg';
-import bg2 from './assets/bg2.jpg';
-import bg3 from './assets/bg3.jpg';
-import bg5 from './assets/bg5.jpg';
-import bg7 from './assets/bg7.jpg';
-import bg10 from './assets/bg10.jpg';
-import bg99 from './assets/bg99.png';
+import bg1 from './assets/bg1.webp';
+import bg2 from './assets/bg2.webp';
+import bg3 from './assets/bg3.webp';
+import bg5 from './assets/bg5.webp';
+import bg7 from './assets/bg7.webp';
+import bg10 from './assets/bg10.webp';
+import bg99 from './assets/bg99.webp';
 
 // **PRODUCTION API URL - CHANGE THIS FOR DEPLOYMENT**
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
